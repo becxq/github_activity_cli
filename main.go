@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"reflect"
 	"strconv"
 )
 
@@ -56,26 +55,22 @@ func main() {
 	args := os.Args[1:]
 	var username string
 	var count int
+	var err error
 
 	if len(args) == 0 {
-		fmt.Println("To use github activity checker, you need to put github username as a first argument\nOptional: Number of string")
+		fmt.Println("To use github activity checker, you need to put github username as a first argument\nOptional: Number of events to show")
 		return
 	} else if len(args) == 1 {
-		if reflect.TypeOf(args[0]) != reflect.TypeOf(".") {
-			fmt.Println("To use github activity checker, you need to put github username as a first argument\nOptional: Number of string")
-			fmt.Println("Wrong data format")
-			return
-		}
 		username = args[0]
 		count = 5
 	} else if len(args) == 2 {
-		if _, err := strconv.Atoi(args[1]); reflect.TypeOf(args[0]) != reflect.TypeOf(".") && err != nil {
-			fmt.Println("To use github activity checker, you need to put github username as a first argument\nOptional: Number of string")
-			fmt.Println("Wrong data format")
+		username = args[0]
+		count, err = strconv.Atoi(args[1])
+
+		if err != nil {
+			fmt.Println("Format is wrong")
 			return
 		}
-		username = args[0]
-		count, _ = strconv.Atoi(args[1])
 	}
 
 	resp, err := http.Get(fmt.Sprintf("https://api.github.com/users/%s/events/public", username))
@@ -86,7 +81,7 @@ func main() {
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode == 404 {
 		fmt.Println("User not found. Try again")
 		return
 	}
@@ -106,7 +101,7 @@ func main() {
 
 	result := []string{}
 	c := 1
-	for i := 0; i < count+1; i++ {
+	for i := 0; len(result) < count && i < len(activity)-1; i++ {
 		if activity[i].Repo != activity[i+1].Repo || activity[i].EventType != activity[i+1].EventType {
 			result = append(result, activity[i].convert(c))
 			c = 0
